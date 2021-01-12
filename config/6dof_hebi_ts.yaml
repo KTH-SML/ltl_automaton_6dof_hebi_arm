@@ -1,0 +1,82 @@
+# TS definitions are to be interpreted by the agent node. The LTL core planner only uses the node names, connections, weights, and action names to build its automaton.
+#
+# Possible TS types:
+#   6d_jointspace_region (6d joint position: joint name, joint position)
+#   hebi_load
+
+# Need test.
+
+state_dim: ["6d_jointspace_region", "hebi_load"]
+state_models:
+    6d_jointspace_region:
+        ts_type: "6d_jointspace_region"
+        initial: "r1"
+        nodes: 
+            r1:
+                attr:
+                    type: "square"
+                    position: [1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
+                    radius: 0.5
+                    hysteresis: 0.05
+                connected_to:
+                    r1: "goto_r1" 
+                    r3: "goto_r3"
+            r2:
+                attr:
+                    type: "square"
+                    position: [-1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
+                    radius: 0.5
+                    hysteresis: 0.05
+                connected_to:
+                    r2: "goto_r2"
+                    r3: "goto_r3"
+            r3:
+                attr:
+                    type: "square"
+                    position: [0.5, 1.0, 1.17, 0.9, 2.0, 0.0]
+                    radius: 0.5
+                    hysteresis: 0.05
+                connected_to:
+                    r1: "goto_r1" 
+                    r2: "goto_r2"
+                    r3: "goto_r3"
+    hebi_load:
+        ts_type: "hebi_load"
+        initial: "unloaded"
+        nodes:
+            unloaded:
+                connected_to:
+                    loaded: "pick"
+                    unloaded: "idle"
+            loaded:
+                connected_to:
+                    loaded: "idle"
+                    unloaded: "drop"
+
+actions:
+    goto_r1:
+        type: "move"
+        weight: 10
+        attr:
+            jointposition: [1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
+    goto_r2:
+        type: "move"
+        weight: 10
+        attr:
+            jointposition: [-1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
+    goto_r3:
+        type: "move"
+        weight: 10
+        attr:
+            jointposition: [0.5, 1.0, 1.17, 0.9, 2.0, 0.0]
+    pick:
+        type: "hebi_pick"
+        weight: 10
+    drop:
+        type: "hebi_drop"
+        weight: 10
+    idle:
+        type: "hebi_idle"
+        weight: 10
+             
+
