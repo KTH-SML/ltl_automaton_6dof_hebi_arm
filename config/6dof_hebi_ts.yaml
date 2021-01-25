@@ -4,42 +4,42 @@
 #   6d_jointspace_region (6d joint position: joint name, joint position)
 #   hebi_load
 
-# Need test.
+# Need test. Circular type could be changed. related to region_6d_jointspace_monitor.py under tl_automaton_std_transition_systems package
 
 state_dim: ["6d_jointspace_region", "hebi_load"]
 state_models:
     6d_jointspace_region:
         ts_type: "6d_jointspace_region"
-        initial: "r1"
+        initial: "home"
         nodes: 
-            r1:
+            home:
                 attr:
-                    type: "square"
+                    type: "circular"
                     position: [1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
                     radius: 0.5
                     hysteresis: 0.05
                 connected_to:
-                    r1: "goto_r1" 
-                    r3: "goto_r3"
-            r2:
+                    home: "goto_home"
+                    pick_ready: "goto_pick_ready" 
+                    drop_ready: "goto_drop_ready"
+            pick_ready:
                 attr:
-                    type: "square"
+                    type: "circular"
                     position: [-1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
                     radius: 0.5
                     hysteresis: 0.05
                 connected_to:
-                    r2: "goto_r2"
-                    r3: "goto_r3"
-            r3:
+                    pick_ready: "goto_pick_ready"
+                    home: "goto_home"
+            drop_ready:
                 attr:
-                    type: "square"
+                    type: "circular"
                     position: [0.5, 1.0, 1.17, 0.9, 2.0, 0.0]
                     radius: 0.5
                     hysteresis: 0.05
                 connected_to:
-                    r1: "goto_r1" 
-                    r2: "goto_r2"
-                    r3: "goto_r3"
+                    home: "goto_home" 
+                    drop_ready: "goto_drop_ready"
     hebi_load:
         ts_type: "hebi_load"
         initial: "unloaded"
@@ -54,17 +54,17 @@ state_models:
                     unloaded: "drop"
 
 actions:
-    goto_r1:
+    goto_home:
         type: "move"
         weight: 10
         attr:
             jointposition: [1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
-    goto_r2:
+    goto_pick_ready:
         type: "move"
         weight: 10
         attr:
             jointposition: [-1.5, 0.2, 1.17, 0.9, 2.0, 0.0]
-    goto_r3:
+    goto_drop_ready:
         type: "move"
         weight: 10
         attr:

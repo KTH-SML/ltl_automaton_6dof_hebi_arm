@@ -90,7 +90,7 @@ class LTLController(object):
         self.next_move_sub = rospy.Subscriber("next_move_cmd", std_msgs.msg.String, self.next_move_callback, queue_size=1)
 
         # Setup jointspace command publisher
-        # TO DO: add namespace, for gazebo or experiment 
+        # TO DO: add namespace, for gazebo or experiment?
         self.joint_cmd_pub = rospy.Publisher("command/joint_state",JointState, latch= True,queue_size=10)
 
         rospy.loginfo("LTL automaton 6dof Hebi Arm node: initialized!")
