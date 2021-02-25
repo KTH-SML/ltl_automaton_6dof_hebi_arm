@@ -1,0 +1,6 @@
+<launch>
+  <node name="hebiros_node" pkg="hebiros" type="hebiros_node" respawn="false" output="screen"/>
+
+  <node name="trajectory_action_node" pkg="ltl_automaton_6dof_hebi_arm" type="hebi_action_test.py" respawn="false" output="screen"/>
+
+</launch>

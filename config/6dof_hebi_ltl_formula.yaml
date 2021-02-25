@@ -1,2 +1,2 @@
-hard_task: "([]<> (home)) && ([]<> pick_ready) && ([]<> drop_ready)"
+hard_task: "([]<> loaded ) && ([]<> unloaded) "
 soft_task: ""

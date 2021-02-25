@@ -51,6 +51,10 @@ class LTLController(object):
         self.t = self.t0
         self.plan_index = 0
 
+        # Initialize inplace feedback
+        self.pick_inplace_feedback = False
+        self.drop_inplace_feedback = False
+
         self.CmdMsg = JointState()
 
     #-------------------------------------------------------------------------
@@ -92,6 +96,9 @@ class LTLController(object):
         # Setup jointspace command publisher
         # TO DO: add namespace, for gazebo or experiment?
         self.joint_cmd_pub = rospy.Publisher("command/joint_state",JointState, latch= True,queue_size=10)
+
+        # Setup assembly task (pick assembly) acknowkedge topic subscriber
+        self.pick_inplace_sub = rospy.Subscriber("pick_inplace_ack", std_msgs.msg.Bool, self.pick_inplace_ack_callback)
 
         rospy.loginfo("LTL automaton 6dof Hebi Arm node: initialized!")
 
@@ -150,21 +157,44 @@ class LTLController(object):
             # Extract pose to move to:
             jointposition = act_dict['attr']['jointposition']
 
-            # Set new position goal and send
-            self.CmdMsg.header.seq = self.plan_index
-            self.CmdMsg.header.stamp = self.t
-            self.CmdMsg.header.frame_id = 'map'
-            #TO DO: Should be less hard-coded?
-            self.CmdMsg.name = ['Arm/base','Arm/shoulder','Arm/elbow','Arm/wrist1','Arm/wrist2','Arm/wrist3']
+            # Set new position goal
+            self.CmdMsg.position = jointposition
+
+        if act_dict['type'] == 'hebi_pick':
+            # wait for the robot to be picked from to be in place
+            # 
+            if not self.pick_inplace_feedback:
+                return False
+            else:
+                self.pick_inplace_feedback = False
+
+                # TODO go to pick_position
+                jointposition = act_dict['attr']['jointposition']
+
+                # Set new position goal and send
+                self.CmdMsg.header.seq = self.plan_index
+                self.CmdMsg.header.stamp = self.t
+                self.CmdMsg.header.frame_id = 'map'
+                #TO DO: Should be less hard-coded?
+                self.CmdMsg.name = ['Arm/base','Arm/shoulder','Arm/elbow','Arm/wrist1','Arm/wrist2','Arm/wrist3']
 
             self.CmdMsg.position = jointposition
 
-        #if act_dict['type'] == 'hebi_pick':
-            # TO DO
+                # TODO send the command to the magnet gripper
+
+                # TODO go back to pick_ready 
             
 
         #if act_dict['type'] == 'hebi_drop':
             # TO DO
+
+    #-----------------------------------------
+    # Handle pick cargo inplace acknowledgement
+    #------------------------------------------
+    def pick_inplace_ack_callback(self,msg)
+        self.pick_inplace_feedback = msg.data
+
+
 
     def main_loop(self):
         rate = rospy.Rate(50)
@@ -183,6 +213,13 @@ class LTLController(object):
                     self.ltl_state_msg.header.stamp = rospy.Time.now()
                     self.ltl_state_msg.ts_state.states = self.curr_ltl_state
                     self.ltl_state_pub.publish(self.ltl_state_msg)
+            
+            # setting up the cmd header 
+            self.CmdMsg.header.seq = self.plan_index
+            self.CmdMsg.header.stamp = self.t
+            self.CmdMsg.header.frame_id = 'map'
+            #TO DO: Should be less hard-coded?
+            self.CmdMsg.name = ['Arm/base','Arm/shoulder','Arm/elbow','Arm/wrist1','Arm/wrist2','Arm/wrist3']
 
             self.joint_cmd_pub.publish(self.CmdMsg)    
             # rospy.loginfo("State is %s and prev state is %s" %(self.curr_ltl_state, self.prev_ltl_state))
