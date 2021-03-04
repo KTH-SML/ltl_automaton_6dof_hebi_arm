@@ -206,7 +206,7 @@ class LTLController(object):
             WayPoint1 = self.compose_waypoint(self.currentJointState.position)
             WayPoint2 = self.compose_waypoint(jointposition)
 
-            self.GoalCmd.times = [10.0,20.0]
+            self.GoalCmd.times = [0.0,20.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
             self.currentGoalCmd = self.GoalCmd
 
@@ -288,7 +288,7 @@ class LTLController(object):
 
             # wait for the to-be-loaded robot to be in place
             if not self.drop_inplace_feedback:
-                print("trajActionClient.get_state() is " + str(self.trajActionClient.get_state() ) )
+                # print("trajActionClient.get_state() is " + str(self.trajActionClient.get_state() ) )
                 if not self.goalActionActive:
                     print('testing waiting location 0')
                     self.hebi_wait(self.drop_ready_position)
@@ -465,9 +465,9 @@ class LTLController(object):
         WayPoint = hebiros.msg.WaypointMsg()
         
         # for simulation
-        WayPoint.names = ['Arm/base','Arm/shoulder','Arm/elbow','Arm/wrist1','Arm/wrist2','Arm/wrist3']
+        # WayPoint.names = ['Arm/base','Arm/shoulder','Arm/elbow','Arm/wrist1','Arm/wrist2','Arm/wrist3']
         # for experiment
-        # WayPoint.names = ['Arm/base/X8_9','Arm/shoulder/X8_16','Arm/elbow/X5_9','Arm/wrist1/X5_9','Arm/wrist2/X5_1','Arm/wrist3/X5_1']
+        WayPoint.names = ['Arm/base/X8_9','Arm/shoulder/X8_16','Arm/elbow/X5_9','Arm/wrist1/X5_9','Arm/wrist2/X5_1','Arm/wrist3/X5_1']
         WayPoint.positions = position
         WayPoint.velocities = [0.0,0.0,0.0, 0.0,0.0,0.0]
         WayPoint.accelerations =  [0.0,0.0,0.0, 0.0,0.0,0.0]
@@ -484,7 +484,7 @@ class LTLController(object):
         # go to the target position 
         WayPoint2 = self.compose_waypoint(position)
 
-        self.GoalCmd.times = [0.0,20]
+        self.GoalCmd.times = [0.0,20.0]
         self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
         # Send to the action server. 
@@ -528,7 +528,11 @@ class LTLController(object):
 
             # if the hebi action is sent and executed already while still no next_move_command received
             if self.hebiActionState == 0 and not self.goalActionActive:
-                self.hebi_wait(self.currentJointState.position)
+                if self.currentGoalCmd.waypoints[1].positions:
+                    self.hebi_wait(self.currentGoalCmd.waypoints[1].positions)
+                else:
+                    self.hebi_wait(self.currentJointState)
+
 
 
             # rospy.loginfo("State is %s and prev state is %s" %(self.curr_ltl_state, self.prev_ltl_state))
