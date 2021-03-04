@@ -16,69 +16,104 @@ from sensor_msgs.msg import JointState
 # def jointstate_callback(msg):
 #     currentJointState = msg
 
-def hebi_traj_client():
-    # Creates the SimpleActionClient, passing the type of the action
-    # (FibonacciAction) to the constructor.
-    client = actionlib.SimpleActionClient('hebiros/arm_group/trajectory', hebiros.msg.TrajectoryAction)
-
-    # Waits until the action server has started up and started
-    # listening for goals.
-    client.wait_for_server()
-
-    # jointstate_sub = rospy.Subscriber("/hebiros/arm_group/feedback/joint_state", JointState, jointstate_callback, queue_size=1)
+class HebiController(object):
+    def __init__(self):
+        self.init_params()
+        self.main_loop()
 
 
-    # Creates a goal to send to the action server.
-    # Goal= hebiros.msg.TrajectoryActionGoal()
-    GoalCmd= hebiros.msg.TrajectoryGoal()
-    WayPoints1 = hebiros.msg.WaypointMsg()
-    WayPoints2 = hebiros.msg.WaypointMsg()
+    def init_params(self):
+        # Creates a goal to send to the action server.
+        # Goal= hebiros.msg.TrajectoryActionGoal()
+        self.GoalCmd1= hebiros.msg.TrajectoryGoal()
+        self.GoalCmd2= hebiros.msg.TrajectoryGoal()
+        WayPoints1 = hebiros.msg.WaypointMsg()
+        WayPoints2 = hebiros.msg.WaypointMsg()
 
-    WayPoints1.names = ['Arm/base/X8_9','Arm/shoulder/X8_16','Arm/elbow/X5_9','Arm/wrist1/X5_9','Arm/wrist2/X5_1','Arm/wrist3/X5_1']
-    WayPoints1.positions = [0.56, 0.94, 1.61, -1.10, 1.62, 0.34]
-    WayPoints1.velocities = [0.0,0.0,0.0, 0.0,0.0,0.0]
-    WayPoints1.accelerations =  [0.0,0.0,0.0, 0.0,0.0,0.0]
+        WayPoints1.names = ['Arm/base/X8_9','Arm/shoulder/X8_16','Arm/elbow/X5_9','Arm/wrist1/X5_9','Arm/wrist2/X5_1','Arm/wrist3/X5_1']
+        WayPoints1.positions = [0.1727004498243332, 1.1392163038253784, 2.146705389022827, 2.866239547729492, -1.5402566194534302, 0.4419786334037781]
+        WayPoints1.velocities = [0.0,0.0,0.0, 0.0,0.0,0.0]
+        WayPoints1.accelerations =  [0.0,0.0,0.0, 0.0,0.0,0.0]
 
-    WayPoints2.names = ['Arm/base/X8_9','Arm/shoulder/X8_16','Arm/elbow/X5_9','Arm/wrist1/X5_9','Arm/wrist2/X5_1','Arm/wrist3/X5_1']
-    WayPoints2.positions = [0.56, 1.25, 1.61, -1.10, 1.62, 0.34]
-    WayPoints2.velocities = [0.0,0.0,0.0, 0.0,0.0,0.0]
-    WayPoints2.accelerations =  [0.0,0.0,0.0, 0.0,0.0,0.0]
+        WayPoints2.names = ['Arm/base/X8_9','Arm/shoulder/X8_16','Arm/elbow/X5_9','Arm/wrist1/X5_9','Arm/wrist2/X5_1','Arm/wrist3/X5_1']
+        WayPoints2.positions = [-0.5599199533462524, 0.851489245891571, 2.21124005317688, 3.095844268798828, -1.6593201160430908, 0.12772037088871002]
+        WayPoints2.velocities = [0.0,0.0,0.0, 0.0,0.0,0.0]
+        WayPoints2.accelerations =  [0.0,0.0,0.0, 0.0,0.0,0.0]
 
-    GoalCmd.times = [20.0,50.0]
-    GoalCmd.waypoints = [WayPoints1,WayPoints2]
+        self.GoalCmd1.times = [00.0,40.0]
+        self.GoalCmd1.waypoints = [WayPoints1,WayPoints2]
+        self.GoalCmd2.times = [00.0,40.0]
+        self.GoalCmd2.waypoints = [WayPoints2,WayPoints2]
+        self.goalActionActive = False
 
-    # Goal.goal = GoalCmd
-    # Goal.header.seq = 1
-    # Goal.header.stamp = rospy.Time.now()
-    # Goal.header.frame_id = 'map'
+        self.i = 0
 
-    # client.wait_for_server()
-    print('hebi server ready!')
+        # Creates the SimpleActionClient, passing the type of the action
+        # (FibonacciAction) to the constructor.
+        self.client = actionlib.SimpleActionClient('/kth_hebi_arm/hebiros/arm_group/trajectory', hebiros.msg.TrajectoryAction)
 
-    # Sends the goal to the action server. with several callbacks
-    client.send_goal(GoalCmd,done_cb = goalActionActive_done_cb)
+        # Waits until the action server has started up and started
+        # listening for goals.
+        self.client.wait_for_server()
 
-    # Waits for the server to finish performing the action.
-    client.wait_for_result()
-    print('Waiting for results!')
+        # jointstate_sub = rospy.Subscriber("/hebiros/arm_group/feedback/joint_state", JointState, jointstate_callback, queue_size=1)
 
-    # Prints out the result of executing the action
-    return client.get_result()  # A Result sensor
 
-# ------------------------------------
-#     Process action done goalActionActive_done_cb
-# ------------------------------------
-def goalActionActive_done_cb(GoalStatus,result):
+        # Goal.goal = GoalCmd
+        # Goal.header.seq = 1
+        # Goal.header.stamp = rospy.Time.now()
+        # Goal.header.frame_id = 'map'
 
-    goalActionActive= False
+        # client.wait_for_server()
+        print('hebi server ready!')
 
+    def hebi_traj_client(self):
+
+        self.goalActionActive= True
+        if self.i == 0:
+            # Sends the goal to the action server. with several callbacks
+            self.client.send_goal(self.GoalCmd1,done_cb = self.goalActionActive_done_cb)
+            rospy.loginfo('i is 0, goint to position 2')
+            self.i = self.i + 1
+        else:
+            rospy.loginfo('i is not 0, waiting at position 2')
+            self.client.send_goal(self.GoalCmd2,done_cb = self.goalActionActive_done_cb)
+
+
+
+        # Waits for the server to finish performing the action.
+        # self.client.wait_for_result()
+        # print('Waiting for results!')
+
+        # Prints out the result of executing the action
+        # return self.client.get_result()  # A Result sensor
+
+    # ------------------------------------
+    #     Process action done goalActionActive_done_cb
+    # ------------------------------------
+    def goalActionActive_done_cb(self,GoalStatus,result):
+        print("An action has just finished.")
+        self.goalActionActive= False
+
+    def main_loop(self):
+        rate = rospy.Rate(20)
+
+        while not rospy.is_shutdown():
+            if not self.goalActionActive:
+                self.hebi_traj_client()
+            
+            rate.sleep()   
+
+
+
+    
 if __name__ == '__main__':
+    rospy.init_node('hebi_control',anonymous=False)
     try:
         # Initializes a rospy node so that the SimpleActionClient can
         # publish and subscribe over ROS.
-        rospy.init_node('hebi_traj_client_py')
-        result = hebi_traj_client()
-        print("Result: %s", str(result))
+        hebi_control = HebiController()
+        rospy.spin()
     except rospy.ROSInterruptException:
         print("program interrupted before completion", file=sys.stderr)
 
