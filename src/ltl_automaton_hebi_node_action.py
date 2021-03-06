@@ -57,7 +57,6 @@ class LTLController(object):
         # Initialize the end_effector state and command
         self.end_effector_state = None
         self.end_effector_on = Bool(False)
-        self.end_effector_functioning = None
 
         # Initialize inplace feedback
         self.pick_inplace_feedback = False
@@ -115,6 +114,7 @@ class LTLController(object):
         self.next_move_sub = rospy.Subscriber("next_move_cmd", std_msgs.msg.String, self.next_move_callback, queue_size=1)
 
         # Subscribe to arm joint_state topic 
+        # topic path for experiment 
         self.pose_sub = rospy.Subscriber("hebiros/arm_group/feedback/joint_state", JointState, self.joint_state_callback)
 
         # Setup cargo-for-pickup in-place acknowkedge topic subscriber
@@ -206,9 +206,9 @@ class LTLController(object):
             WayPoint1 = self.compose_waypoint(self.currentJointState.position)
             WayPoint2 = self.compose_waypoint(jointposition)
 
-            self.GoalCmd.times = [0.0,20.0]
+            self.GoalCmd.times = [0.0,5.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
-            self.currentGoalCmd = self.GoalCmd
+            self.currentGoalCmd = deepcopy(self.GoalCmd)
 
             # Sends the goal to the action server. 
             self.goalActionActive = True
@@ -236,7 +236,7 @@ class LTLController(object):
                 # go to the target position 
                 WayPoint2 = self.compose_waypoint(pick_position)
 
-                self.GoalCmd.times = [0.0,20.0]
+                self.GoalCmd.times = [0.0,5.0]
                 self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
                 # Sends the goal to the action server. 
@@ -252,15 +252,14 @@ class LTLController(object):
                     # check if the go-back to pick-ready command sent and the end-effector functioning, return 0
                     # else: trajectoryAction still implementing, return 3
                 if not self.goalActionActive:
-                    if ((self.dist_6d_err(self.currentJointState.position, self.pick_ready_position ) < 1.0) and
-                            not self.end_effector_functioning):  
-                        self.currentGoalCmd = self.GoalCmd
+                    if ((self.dist_6d_err(self.currentJointState.position, self.pick_ready_position ) < 0.05) and (self.end_effector_state != "activated")):  
+                        self.currentGoalCmd = deepcopy(self.GoalCmd)
                         self.goalActionActive = True
                         self.trajActionClient.send_goal(self.GoalCmd,done_cb = self.pickCargo)
-                        rospy.loginfo("Location 3 Goal" + str(pick_position) + " is send to Trajectory Server!")
+                        rospy.loginfo("Goal" + str(pick_position) + " is send to Trajectory Server!")
 
-                        if self.end_effector_functioning == False:
-                            rospy.loginfo("location 2 The end-effector cannot be activated. Trying again. ")
+                        if self.end_effector_state == "deactivated":
+                            rospy.loginfo(" The end-effector did not activate yet. Trying. ")
                             self.hebiActionState = 2
                             return self.hebiActionState
                         self.hebiActionState = 3
@@ -271,9 +270,8 @@ class LTLController(object):
                         self.hebiActionState = 4
                         return self.hebiActionState
                 else:
-                    if (self.currentGoalCmd.waypoints[1].positions  == self.pick_ready_position and self.end_effector_functioning):
-                        self.end_effector_functioning = None
-                        rospy.loginfo("location 0. Pick action succeeds. ")
+                    if (self.currentGoalCmd.waypoints[1].positions == self.pick_ready_position and (self.end_effector_state == "activated")):
+                        rospy.loginfo("Pick action succeeds. ")
                         self.hebiActionState = 0
                         return self.hebiActionState
                     self.hebiActionState = 3
@@ -301,7 +299,7 @@ class LTLController(object):
                 # go to the target position 
                 WayPoint2 = self.compose_waypoint(drop_position)
 
-                self.GoalCmd.times = [0.0,20.0]
+                self.GoalCmd.times = [0.0,5.0]
                 self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
                 # Sends the goal to the action server. 
@@ -317,15 +315,15 @@ class LTLController(object):
                     # check if the go-back to drop-ready command sent and the end-effector functioning, return 0
                     # else: trajectoryAction still implementing, return 3 
                 if not self.goalActionActive:
-                    if ((self.dist_6d_err(self.currentJointState.position, self.drop_ready_position ) < 1.0) and
-                            not self.end_effector_functioning):  
-                        self.currentGoalCmd = self.GoalCmd
+                    if ((self.dist_6d_err(self.currentJointState.position, self.drop_ready_position ) < 0.05) and (self.end_effector_state !="deactivated")): 
+                        print("\n Hebi arm is approaching drop position now.")
+                        self.currentGoalCmd = deepcopy(self.GoalCmd)
                         self.goalActionActive = True
                         self.trajActionClient.send_goal(self.GoalCmd,done_cb = self.dropCargo)
-                        rospy.loginfo("Location 3 Goal" + str(drop_position) + " is send to Trajectory Server!")
+                        rospy.loginfo("Goal" + str(drop_position) + " is send to Trajectory Server!")
 
-                        if self.end_effector_functioning == False:
-                            rospy.loginfo("location 2 The end-effector cannot be de-activated. Trying again. ")
+                        if self.end_effector_state == "activated":
+                            rospy.loginfo("The end-effector is not de-activated. Trying. ")
                             self.hebiActionState = 2
                             return self.hebiActionState
                         self.hebiActionState = 3
@@ -336,11 +334,10 @@ class LTLController(object):
                         self.hebiActionState = 4
                         return self.hebiActionState
                 else:
-                    print("self.currentGoalCmd.waypoints[1] == self.drop_ready_position:" + str(self.currentGoalCmd.waypoints[1].positions == self.drop_ready_position))
-                    print("self.end_effector_functioning: " + str(self.end_effector_functioning))
-                    if (self.currentGoalCmd.waypoints[1].positions == self.drop_ready_position and self.end_effector_functioning):
-                        self.end_effector_functioning = None
-                        rospy.loginfo("location 0. Drop action succeeds. ")
+                    # print("self.currentGoalCmd.waypoints[1]: " + str(self.currentGoalCmd.waypoints[1].positions))
+                    # print("self.currentJointState.position: " + str(self.currentJointState.position))
+                    if ((self.currentGoalCmd.waypoints[1].positions == self.drop_ready_position) and (self.end_effector_state == "deactivated")):
+                        rospy.loginfo("Drop action succeeds. ")
                         self.hebiActionState = 0
                         return self.hebiActionState
                     self.hebiActionState = 3
@@ -381,9 +378,7 @@ class LTLController(object):
                 print("self.end_effector_state is " + str(self.end_effector_state))
                 if self.end_effector_state != "activated":
                     self.end_effector_pub.publish(self.end_effector_on)
-                    self.end_effector_functioning = False
                 else:
-                    self.end_effector_functioning = True
                     break
                 
 
@@ -393,9 +388,9 @@ class LTLController(object):
             # go to the target position 
             WayPoint2 = self.compose_waypoint(self.pick_ready_position)
 
-            self.GoalCmd.times = [0.0,20.0]
+            self.GoalCmd.times = [0.0,5.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
-            self.currentGoalCmd = self.GoalCmd
+            self.currentGoalCmd = deepcopy(self.GoalCmd)
 
             # Sends the goal to the action server.
             self.goalActionActive =True
@@ -422,13 +417,12 @@ class LTLController(object):
             self.end_effector_pub.publish(self.end_effector_on)
 
             # a few iterations in case the end-effector is not de-active
+            # todo there are some problems with state checking. Due to sampling maybe?
             for i in range(10):
                 print("self.end_effector_state is " + str(self.end_effector_state))
                 if self.end_effector_state != "deactivated":
                     self.end_effector_pub.publish(self.end_effector_on)
-                    self.end_effector_functioning = False
                 else:
-                    self.end_effector_functioning = True
                     break
 
                 
@@ -437,9 +431,9 @@ class LTLController(object):
             # go to the target position 
             WayPoint2 = self.compose_waypoint(self.drop_ready_position)
 
-            self.GoalCmd.times = [0.0,20.0]
+            self.GoalCmd.times = [0.0,5.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
-            self.currentGoalCmd = self.GoalCmd
+            self.currentGoalCmd = deepcopy(self.GoalCmd)
             
             # Sends the goal to the action server.
             self.goalActionActive = True
@@ -484,11 +478,11 @@ class LTLController(object):
         # go to the target position 
         WayPoint2 = self.compose_waypoint(position)
 
-        self.GoalCmd.times = [0.0,20.0]
+        self.GoalCmd.times = [0.0,5.0]
         self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
         # Send to the action server. 
-        self.currentGoalCmd = self.GoalCmd
+        self.currentGoalCmd = deepcopy(self.GoalCmd)
         self.goalActionActive = True
         self.trajActionClient.send_goal(self.GoalCmd, done_cb = self.goalActionActive_done_cb)
         
@@ -502,6 +496,10 @@ class LTLController(object):
             if not (self.curr_ltl_state == self.prev_ltl_state):
                 # Update previous state
                 print '\n update previous state'
+                print '\n --------self.prev_ltl_state---------------'
+                print self.prev_ltl_state
+                print '\n --------self.curr_ltl_state---------------'
+                print self.curr_ltl_state
                 self.prev_ltl_state = deepcopy(self.curr_ltl_state)
                 # If all states are initialized (not None), publish message
                 if all([False for element in self.curr_ltl_state if element == None]):

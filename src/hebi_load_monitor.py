@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import rospy
 from std_msgs.msg import String, Bool
-# from ltl_automaton_planner.ltl_automaton_utilities import import_ts_from_file
+from ltl_automaton_planner.ltl_automaton_utilities import import_ts_from_file
+from sensor_msgs.msg import JointState
+from copy import deepcopy
 
 # from ltl_automaton_msgs.srv import ClosestState
 import sys
@@ -12,59 +14,84 @@ import sys
 #=====================================
 class HebiLoadStateMonitor(object):
     def __init__(self):
-        self.state=None
+        self.currentJointState = JointState()
+        self.currentEndEffectorState = None
+        self.prev_load_state = None
+        self.curr_load_state = "loaded"
 
-        self.init_params()
+        self.transition_system = import_ts_from_file(rospy.get_param('transition_system_textfile'))
+        self.pick_ready_position = self.transition_system['actions']['goto_pick_ready']['attr']['jointposition']
+        self.drop_ready_position = self.transition_system['actions']['goto_drop_ready']['attr']['jointposition']
+
+        print("pick_ready_position " + str(self.pick_ready_position))
 
         # Setup pose callback
         self.setup_pub_sub()
+        self.main_loop()
 
-    #-----------------
-    # Init parameters
-    #-----------------
-    def init_params(self):
-        # Get region dict of transition system from textfile parameter
-        # self.load_def_dict = import_ts_from_file(rospy.get_param('transition_system_textfile'))['state_models']['hebi_load']
     #----------------------------------
     # Setup subscribers and publishers
     #----------------------------------
     def setup_pub_sub(self):
-        # Setup subscriber to hebi load state
-        self.hebi_load_sub = rospy.Subscriber("hebi_load_sensor", Bool, self.load_state_callback,queue_size=100)
 
-        # Publisher of current region
+        # for experiment
+        self.pose_sub = rospy.Subscriber("hebiros/arm_group/feedback/joint_state", JointState, self.joint_state_callback)
+        # Setup end_effector state subscriber and command publisher
+        self.end_effector_sub= rospy.Subscriber("end_effector_state", String, self.end_effector_state_callback)   
+
+        # Publisher of current load state
         self.current_load_state_pub = rospy.Publisher("current_load_state", String, latch=True, queue_size=10)
 
-        # Initialize closest state service
-        # self.closest_state_srv = rospy.Service('closest_load_state', ClosestState, self.closest_state_callback)
+    #---------------------------------------
+    # handle joint_state_callback
+    #---------------------------------------
+    def joint_state_callback(self, msg):
+        self.currentJointState = msg
 
     #---------------------------------------
-    # Publish load state from sensor output
+    # handle end_effector_state_callback
     #---------------------------------------
-    def load_state_callback(self, msg):
-        if msg.data:
-            self.state = "loaded"
-        else:
-            self.state = "unloaded"
+    def end_effector_state_callback(self, msg):
+        self.currentEndEffectorState = msg.data
 
-        self.current_load_state_pub.publish(self.state)
 
-    #------------------------------
-    # Handle closest state request
-    #------------------------------
-    # def closest_state_callback(self, req):
-    #     res = ClosestStateResponse()
-    #     # Reply if state is known
-    #     if self.state:
-    #         # From current state, find would to be state in TS
-    #         for connected_state in self.load_def_dict["nodes"][self.state]["connected_to"].keys():
-    #             # If connected state action is requested action, add to closest
-    #             if self.load_def_dict["nodes"][self.state]["connected_to"][connected_state] == req.action_input:
-    #                 res.closest_state = str(connected_state)
+    #-------------------------------
+    # Compute distance
+    # between two jointPositions
+    #-------------------------------
+    # Position format [e1,e2,e3,...,e6]
+    # Pose msg is ROS sensor_msgs/JointState/position
+    # TODO need to adjust the distance metric based on experiment
+    def dist_6d_err(self, position, center_position):
+        # return math.sqrt((position[0] - center_position[0])**2 + (position[1] - center_position[1])**2  + (position[2] - center_position[2])**2 
+        #                +   (position[3] - center_position[3])**2  + (position[4] - center_position[4])**2   + (position[5] - center_position[5])**2  )
+        position_err = [a_i - b_i for a_i, b_i in zip(position, center_position)] 
+        position_err_abs = [abs(err) for err in position_err]
+        return max(position_err_abs[0:4]) + max(position_err_abs[4:]) 
 
-    #         # Publish response. If no closest found, returns empty
-    #         # It is a predicted next state, i.e., a successor state. Used for HIL 
-    #         return res
+    def main_loop(self):
+        rate = rospy.Rate(20)
+
+        while not rospy.is_shutdown():
+            # If current state is different from previous state
+            # update message and publish it
+            if self.currentJointState.position:
+                if ((self.dist_6d_err(self.pick_ready_position, self.currentJointState.position) < 0.05) and self.currentEndEffectorState == "activated"):
+                    self.curr_load_state = "loaded"
+                elif ((self.dist_6d_err(self.drop_ready_position, self.currentJointState.position) < 0.05) and self.currentEndEffectorState == "deactivated"):
+                    self.curr_load_state = "unloaded"
+
+            if not (self.curr_load_state == self.prev_load_state):
+                # Update previous state
+                self.prev_load_state = deepcopy(self.curr_load_state)
+                # # Publish msg
+                print '\n -----------------------'
+                print self.curr_load_state
+                self.current_load_state_pub.publish(self.curr_load_state)
+
+            # rospy.loginfo("State is %s and prev state is %s" %(self.curr_ltl_state, self.prev_ltl_state))
+            rate.sleep()    
+
 
 
 #============================
