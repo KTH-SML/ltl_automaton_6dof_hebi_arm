@@ -42,6 +42,12 @@ class HebiLoadStateMonitor(object):
         # Publisher of current load state
         self.current_load_state_pub = rospy.Publisher("current_load_state", String, latch=True, queue_size=10)
 
+        # Publisher of delivered_assembly_ack
+        self.delivered_assembly_ack_pub = rospy.Publisher("/delivered_assembly_ack", Bool, latch=True, queue_size=10)
+
+        # Publisher of picked_up_assembly_ack
+        self.picked_up_assembly_ack_pub = rospy.Publisher("/picked_up_assembly_ack", Bool, latch=True, queue_size=10)
+
     #---------------------------------------
     # handle joint_state_callback
     #---------------------------------------
@@ -88,6 +94,13 @@ class HebiLoadStateMonitor(object):
                 print '\n -----------------------'
                 print self.curr_load_state
                 self.current_load_state_pub.publish(self.curr_load_state)
+                if self.curr_load_state == "loaded":
+                    delivered_assembly_ack = True
+                    self.delivered_assembly_ack_pub.publish(delivered_assembly_ack)
+                else:
+                    picked_up_assembly_ack = True
+                    self.delivered_assembly_ack_pub.publish(picked_up_assembly_ack)
+
 
             # rospy.loginfo("State is %s and prev state is %s" %(self.curr_ltl_state, self.prev_ltl_state))
             rate.sleep()    
