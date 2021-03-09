@@ -206,7 +206,7 @@ class LTLController(object):
             WayPoint1 = self.compose_waypoint(self.currentJointState.position)
             WayPoint2 = self.compose_waypoint(jointposition)
 
-            self.GoalCmd.times = [0.0,5.0]
+            self.GoalCmd.times = [0.0,3.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
             self.currentGoalCmd = deepcopy(self.GoalCmd)
 
@@ -236,7 +236,7 @@ class LTLController(object):
                 # go to the target position 
                 WayPoint2 = self.compose_waypoint(pick_position)
 
-                self.GoalCmd.times = [0.0,5.0]
+                self.GoalCmd.times = [0.0,3.0]
                 self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
                 # Sends the goal to the action server. 
@@ -252,7 +252,7 @@ class LTLController(object):
                     # check if the go-back to pick-ready command sent and the end-effector functioning, return 0
                     # else: trajectoryAction still implementing, return 3
                 if not self.goalActionActive:
-                    if ((self.dist_6d_err(self.currentJointState.position, self.pick_ready_position ) < 0.05) and (self.end_effector_state != "activated")):  
+                    if ((self.dist_6d_err(self.currentJointState.position, self.pick_ready_position ) < 0.1) and (self.end_effector_state != "activated")):  
                         self.currentGoalCmd = deepcopy(self.GoalCmd)
                         self.goalActionActive = True
                         self.trajActionClient.send_goal(self.GoalCmd,done_cb = self.pickCargo)
@@ -299,7 +299,7 @@ class LTLController(object):
                 # go to the target position 
                 WayPoint2 = self.compose_waypoint(drop_position)
 
-                self.GoalCmd.times = [0.0,5.0]
+                self.GoalCmd.times = [0.0,3.0]
                 self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
                 # Sends the goal to the action server. 
@@ -388,7 +388,7 @@ class LTLController(object):
             # go to the target position 
             WayPoint2 = self.compose_waypoint(self.pick_ready_position)
 
-            self.GoalCmd.times = [0.0,5.0]
+            self.GoalCmd.times = [0.0,2.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
             self.currentGoalCmd = deepcopy(self.GoalCmd)
 
@@ -431,7 +431,7 @@ class LTLController(object):
             # go to the target position 
             WayPoint2 = self.compose_waypoint(self.drop_ready_position)
 
-            self.GoalCmd.times = [0.0,5.0]
+            self.GoalCmd.times = [0.0,2.0]
             self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
             self.currentGoalCmd = deepcopy(self.GoalCmd)
             
@@ -478,7 +478,7 @@ class LTLController(object):
         # go to the target position 
         WayPoint2 = self.compose_waypoint(position)
 
-        self.GoalCmd.times = [0.0,5.0]
+        self.GoalCmd.times = [0.0,3.0]
         self.GoalCmd.waypoints = [WayPoint1,WayPoint2]
 
         # Send to the action server. 
@@ -530,6 +530,7 @@ class LTLController(object):
                     self.hebi_wait(self.currentGoalCmd.waypoints[1].positions)
                 else:
                     self.hebi_wait(self.currentJointState)
+                rospy.loginfo("hebi arm not receiving next move command. May due to state/joint monitor")
 
 
 

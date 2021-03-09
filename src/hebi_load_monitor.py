@@ -17,7 +17,7 @@ class HebiLoadStateMonitor(object):
         self.currentJointState = JointState()
         self.currentEndEffectorState = None
         self.prev_load_state = None
-        self.curr_load_state = "loaded"
+        self.curr_load_state = "unloaded"
 
         self.transition_system = import_ts_from_file(rospy.get_param('transition_system_textfile'))
         self.pick_ready_position = self.transition_system['actions']['goto_pick_ready']['attr']['jointposition']
@@ -46,7 +46,7 @@ class HebiLoadStateMonitor(object):
         self.delivered_assembly_ack_pub = rospy.Publisher("/delivered_assembly_ack", Bool, latch=True, queue_size=10)
 
         # Publisher of picked_up_assembly_ack
-        self.picked_up_assembly_ack_pub = rospy.Publisher("/picked_up_assembly_ack", Bool, latch=True, queue_size=10)
+        self.picked_up_assembly_ack_pub = rospy.Publisher("/turtlebot/pick_ack", Bool, latch=True, queue_size=10)
 
     #---------------------------------------
     # handle joint_state_callback
@@ -82,9 +82,9 @@ class HebiLoadStateMonitor(object):
             # If current state is different from previous state
             # update message and publish it
             if self.currentJointState.position:
-                if ((self.dist_6d_err(self.pick_ready_position, self.currentJointState.position) < 0.05) and self.currentEndEffectorState == "activated"):
+                if ((self.dist_6d_err(self.pick_ready_position, self.currentJointState.position) < 0.10) and self.currentEndEffectorState == "activated"):
                     self.curr_load_state = "loaded"
-                elif ((self.dist_6d_err(self.drop_ready_position, self.currentJointState.position) < 0.05) and self.currentEndEffectorState == "deactivated"):
+                elif ((self.dist_6d_err(self.drop_ready_position, self.currentJointState.position) < 0.10) and self.currentEndEffectorState == "deactivated"):
                     self.curr_load_state = "unloaded"
 
             if not (self.curr_load_state == self.prev_load_state):
@@ -99,7 +99,7 @@ class HebiLoadStateMonitor(object):
                     self.delivered_assembly_ack_pub.publish(delivered_assembly_ack)
                 else:
                     picked_up_assembly_ack = True
-                    self.delivered_assembly_ack_pub.publish(picked_up_assembly_ack)
+                    self.picked_up_assembly_ack_pub.publish(picked_up_assembly_ack)
 
 
             # rospy.loginfo("State is %s and prev state is %s" %(self.curr_ltl_state, self.prev_ltl_state))

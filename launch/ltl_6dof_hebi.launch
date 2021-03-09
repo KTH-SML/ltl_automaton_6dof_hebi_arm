@@ -21,7 +21,7 @@
      <rosparam param="drop_agent_list" subst_value="True">$(arg drop_agent_list)</rosparam> 
      <rosparam param="pick_agent_load_state_guard" subst_value="True">$(arg pick_agent_load_state_guard)</rosparam>
      <param name="pick_region" type="string" value="s2"/>
-     <param name="drop_region" type="string" value="s10"/> 
+     <param name="drop_region" type="string" value="s2"/> 
   </node>
   
 
