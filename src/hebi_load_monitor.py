@@ -43,10 +43,10 @@ class HebiLoadStateMonitor(object):
         self.current_load_state_pub = rospy.Publisher("current_load_state", String, latch=True, queue_size=10)
 
         # Publisher of delivered_assembly_ack
-        self.delivered_assembly_ack_pub = rospy.Publisher("/delivered_assembly_ack", Bool, latch=True, queue_size=10)
+        self.delivered_assembly_ack_pub = rospy.Publisher("drop_inplace_ack", Bool, latch=True, queue_size=10)
 
         # Publisher of picked_up_assembly_ack
-        self.picked_up_assembly_ack_pub = rospy.Publisher("/turtlebot/pick_ack", Bool, latch=True, queue_size=10)
+        self.picked_up_assembly_ack_pub = rospy.Publisher("pick_inplace_ack", Bool, latch=True, queue_size=10)
 
     #---------------------------------------
     # handle joint_state_callback
