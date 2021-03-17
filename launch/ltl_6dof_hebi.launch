@@ -3,9 +3,12 @@
   <!-- Arguments -->
   <arg name="agent_name" default="kth_hebi_arm"/>
   <arg name="initial_ts_state_from_agent" default="False"/>
-  <arg name="pick_agent_list" default="[nexus0]"/>
+  <arg name="pick_agent_list" default="[nexus]"/>
+  <arg name="pick_agent_load_state_guard" default="[loaded]"/>
+  <arg name="pick_region" default="s2"/>
   <arg name="drop_agent_list" default="[turtlebot]"/>
-  <arg name="pick_agent_load_state_guard" default="[loaded_assembly,loaded_box]"/>
+  <arg name="drop_region" default="s2"/> 
+
 
   <group ns="$(arg agent_name)" >
   <!-- Load parameters -->
@@ -20,8 +23,8 @@
      <rosparam param="pick_agent_list" subst_value="True">$(arg pick_agent_list)</rosparam>
      <rosparam param="drop_agent_list" subst_value="True">$(arg drop_agent_list)</rosparam> 
      <rosparam param="pick_agent_load_state_guard" subst_value="True">$(arg pick_agent_load_state_guard)</rosparam>
-     <param name="pick_region" type="string" value="s2"/>
-     <param name="drop_region" type="string" value="s2"/> 
+     <param name="pick_region" type="string" value="$(arg pick_region)"/>
+     <param name="drop_region" type="string" value="$(arg drop_region)"/> 
   </node>
   
 
