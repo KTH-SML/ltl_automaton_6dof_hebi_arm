@@ -35,7 +35,7 @@ The package provides the agent-level code needed for interacting with the 6-DoF 
 To launch the planner and LTL Hebi arm node, simply run the following command.
 
 ```
-roslaunch ltl_automaton_turtlebot ltl_6dof_hebi.launch
+roslaunch ltl_automaton_6dof_hebi_arm ltl_6dof_hebi.launch
 ```
 
 This will run the planner using the task specification in `config/6dof_hebi_ltl_formula.yaml` and transition system in `config/6dof_hebi_ts.yaml`.
